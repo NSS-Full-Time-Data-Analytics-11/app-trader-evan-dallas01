@@ -72,8 +72,8 @@ WITH ps_av AS	SELECT AVG(price::numeric)::money AS avg_price,
 
 WITH cost_purch AS	(SELECT DISTINCT name,
 					 		genres,
-					 		a.price AS aprice,
-					 		p.price AS pprice,
+					 		a.price AS app_price,
+					 		p.price AS play_price,
 					 		primary_genre,
 						    --weighted avg rating based on review_count from each table. Result is multiplied by 4 and rounded to nearest whole number. This is then divided by 4 to effectively round to nearest 0.25
 					 		ROUND(((((a.review_count::numeric*a.rating)+(p.review_count::numeric*p.rating))/(a.review_count::numeric+p.review_count::numeric))*4),0)/4 AS tru_rating,
@@ -90,8 +90,8 @@ WITH cost_purch AS	(SELECT DISTINCT name,
 
 SELECT name,
 	   genres,
-	   aprice,
-	   pprice,
+	   app_price,
+	   play_price,
 	   primary_genre,
 	   tru_rating,
 	   --tru_rating is already rounded in the CTE so divide by 0.25 to get amount of 6-mo. periods of longevity then * 0.5 to convert to years. 
@@ -102,7 +102,7 @@ SELECT name,
 	   cost_of_purchase::money
 FROM cost_purch
 ORDER BY profit_lifetime DESC
-LIMIT 10;
+;
 
 /* Query to group prior results by purchase price */
 
@@ -138,13 +138,14 @@ WITH cost_purch AS	(SELECT DISTINCT name,
 						    cost_of_purchase::money
 					 FROM cost_purch)
 					 
-SELECT cost_of_purchase, 
+SELECT cost_of_purchase,
+	   AVG(gross_rev::numeric)::money AS avg_gross,
 	   AVG(tru_rating) AS avg_tru_rating,
 	   AVG(profit_lifetime::numeric)::money AS avg_profit,
 	   COUNT(*) AS num_of_apps
 FROM prof_data
 GROUP BY cost_of_purchase
-ORDER BY avg_profit DESC;
+ORDER BY cost_of_purchase ASC;
 
 
 /* Same but with genre */
@@ -189,7 +190,7 @@ SELECT genres,
 FROM prof_data
 GROUP BY GROUPING SETS ((primary_genre),(genres))
 HAVING COUNT(*) >5
-ORDER BY avg_profit DESC;	   
+;	   
 
 /* Content rating */
 
@@ -228,6 +229,8 @@ WITH cost_purch AS	(SELECT DISTINCT name,
 SELECT 
 	   prof_data.pcontent,
 	   prof_data.acontent,
+	   AVG(gross_rev::numeric)::money AS avg_gross,
+	   AVG(cost_of_purchase::numeric)::money AS avg_cost,
 	   AVG(tru_rating) AS avg_tru_rating,
 	   AVG(profit_lifetime::numeric)::money AS avg_profit,
 	   COUNT(DISTINCT name) AS num_of_apps
